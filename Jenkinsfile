@@ -18,7 +18,7 @@ pipeline {
                        export AWS_PROFILE=secondary
                        aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 667333752349.dkr.ecr.us-east-1.amazonaws.com
                        sudo docker tag 205376115077.dkr.ecr.us-east-1.amazonaws.com/staging-scala-image-repo:latest 667333752349.dkr.ecr.us-east-1.amazonaws.com/prod-scala-image-repo:latest
-                       sudo docker push 667333752349.dkr.ecr.us-east-1.amazonaws.com/staging-scala-image-repo:latest    
+                       sudo docker push 667333752349.dkr.ecr.us-east-1.amazonaws.com/prod-scala-image-repo:latest    
                    '''
                 }    
             }
