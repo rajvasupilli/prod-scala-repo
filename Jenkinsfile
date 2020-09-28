@@ -1,9 +1,25 @@
 pipeline {
-    agent any 
+    agent any
+    parameters {
+        text(name: 'STAGING_ACCOUNT_ID', defaultValue: '205376115077', description: 'Enter the AWS Account ID of Staging Environment')
+        text(name: 'PROD_ACCOUNT_ID', defaultValue: '667333752349', description: 'Enter the AWS Account ID of Production Environment')
+        string(name: 'STAGING_REPO_NAME', defaultValue: 'staging-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Staging Environment')
+        string(name: 'PROD_REPO_NAME', defaultValue: 'prod-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Production Environment')
+        string(name: 'REGION', defaultValue: 'us-east-1', description: 'Enter the Region')
+        string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Enter the tag pertaining to the ECR Image')
+
+        text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
+
+        booleanParam(name: 'TOGGLE', defaultValue: true, description: 'Toggle this value')
+
+        choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
+
+        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
+    }
     stages {
         stage('Install Pre-requisites') {
             steps {
-                echo 'Installling the prerequisites!!!'
+                echo 'Installing the prerequisites!!!'
                 sh '''
                       #bash prereq.sh
                    '''
@@ -13,12 +29,12 @@ pipeline {
        stage('Push image from Staging to Production ECR') {
             steps {
                 echo 'Build,Tag and Push the Docker Image into the ECR'
-                sh ''' aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 205376115077.dkr.ecr.us-east-1.amazonaws.com
-                       sudo docker pull 205376115077.dkr.ecr.us-east-1.amazonaws.com/staging-scala-image-repo:latest
+                sh ''' aws ecr get-login-password --region ${params.REGION} | sudo docker login --username AWS --password-stdin ${params.DEV_ACCOUNT_ID}.dkr.ecr.${params.REGION}.amazonaws.com
+                       sudo docker pull ${params.DEV_ACCOUNT_ID}.dkr.ecr.${params.REGION}.amazonaws.com/${params.STAGING_REPO_NAME}:${params.IMAGE_TAG}
                        export AWS_PROFILE=secondary
-                       aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 667333752349.dkr.ecr.us-east-1.amazonaws.com
-                       sudo docker tag 205376115077.dkr.ecr.us-east-1.amazonaws.com/staging-scala-image-repo:latest 667333752349.dkr.ecr.us-east-1.amazonaws.com/prod-scala-image-repo:latest
-                       sudo docker push 667333752349.dkr.ecr.us-east-1.amazonaws.com/prod-scala-image-repo:latest    
+                       aws ecr get-login-password --region ${params.REGION} | sudo docker login --username AWS --password-stdin ${params.STAGING_REPO_NAME}.dkr.ecr.${params.REGION}.amazonaws.com
+                       sudo docker tag ${params.STAGING_REPO_NAME}.dkr.ecr.${params.REGION}.amazonaws.com/${params.STAGING_REPO_NAME}:${params.IMAGE_TAG} ${params.PROD_ACCOUNT_ID}.dkr.ecr.${params.REGION}.amazonaws.com/${params.PROD_REPO_NAME}:${params.IMAGE_TAG}
+                       sudo docker push ${params.PROD_REPO_NAME}.dkr.ecr.${params.REGION}.amazonaws.com/${params.PROD_ACCOUNT_ID}:${params.IMAGE_TAG}    
                    '''
                 }    
             }
