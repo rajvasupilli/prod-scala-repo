@@ -2,12 +2,13 @@ pipeline {
     agent any
     
     parameters {
-        text(name: 'STAGING_ACCOUNT_ID', defaultValue: '406370147020', description: 'Enter the AWS Account ID of Staging Environment')
-        text(name: 'PROD_ACCOUNT_ID', defaultValue: '667333752349', description: 'Enter the AWS Account ID of Production Environment')
-        string(name: 'STAGING_REPO_NAME', defaultValue: 'staging-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Staging Environment')
-        string(name: 'PROD_REPO_NAME', defaultValue: 'prod-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Production Environment')
+          text(name: 'STAGING_ACCOUNT_ID', defaultValue: '406370147020', description: 'Enter the AWS Account ID of Staging Environment')
+          text(name: 'PROD_ACCOUNT_ID', defaultValue: '667333752349', description: 'Enter the AWS Account ID of Production Environment')
         string(name: 'REGION', defaultValue: 'us-east-1', description: 'Enter the Region')
         string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Enter the tag pertaining to the ECR Image')
+        string(name: 'STAGING_REPO_NAME', defaultValue: 'staging-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Staging Environment')
+        string(name: 'PROD_REPO_NAME', defaultValue: 'prod-scala-image-repo', description: 'Enter the AWS ECR Repo name pertaining to Production Environment')
+        
     }
     
     stages {
