@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creating ECS service
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of app requiring ALB exposure
+    Default: ecs-app
+  AppContainerPort:
+    Type: Number
+    Description: Container port of app requiring ALB exposure
+    Default: '9000'
+  AppHostPort:
+    Type: Number
+    Description: Host port of app requiring ALB exposure
+    Default: '9000'
+  ClusterName:
+    Type: String
+    Default: cluster
+  ServiceName:
+    Type: String
+    Default: ecs-service
+  EnvironmentName:
+    Type: String
+    Default: Scala
+  HealthCheckGracePeriodSeconds:
+    Type: Number
+    Default: '30'
+  LoadBalancerScheme:
+    Type: String
+    Default: 'internet-facing'
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-09049a4979aa96888
+  Subnets:
+    Type: CommaDelimitedList
+    Default: subnet-04cf3624384ee4cbb, subnet-0a108eaeaaf93c747
+  DevECRName:
+    Type: String
+    Description: Name of the Dev ECR Repo
+    Default: dev-scala-image-repo
+  DevIAMUser:
+    Type: String
+    Description: User
+    Default: arn:aws:iam::744774087552:user/cloud_user
+  AccountID:
+    Type: String
+    Description: AccountID
+    Default: 744774087552
+    
+Resources: 
+ 
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole'    
+          
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceName, ExecutionRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceName, TaskRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+  
+  cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
+      
+  ecr: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName:
+         Ref: DevECRName
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Sid: AllowPushPull
+            Effect: Allow
+            Principal: 
+              AWS: 
+                Ref: DevIAMUser              
+            Action: 
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:BatchGetImage"
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:PutImage"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:UploadLayerPart"
+              - "ecr:CompleteLayerUpload"
+      
+  taskdefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      NetworkMode: "awsvpc"
+#       ExecutionRoleArn: !Ref Role
+#       arn:aws:iam::654328202400:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS
+      RequiresCompatibilities:
+        - "FARGATE"
+      Cpu: 2048
+      Memory: 4096
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Ref AppName
+          Image: 004269788592.dkr.ecr.us-east-1.amazonaws.com/scala-image-repo:latest
+          Cpu: '10'
+          PortMappings:
+            - ContainerPort: !Ref AppContainerPort
+              HostPort: !Ref AppHostPort
+          Memory: '500'
+          Essential: true 
+   
+  
+     
+  Cron:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: !Sub 'Run the ECS task every 10 minutes'
+      ScheduleExpression: cron(10 * * * ? *)
+      State: ENABLED
+      Targets:
+      - Arn: !GetAtt 
+          - cluster
+          - Arn
+        RoleArn: !GetAtt 
+          - Role
+          - Arn
+        Id: !Ref ServiceName
+#         RoleArn: !Ref Role
+        EcsParameters:
+          TaskDefinitionArn: !Ref taskdefinition 
+#           TaskDefinitionArn: !GetAtt 
+#           - taskdefinition
+#           - Arn
+          TaskCount: 1
+          LaunchType: 'FARGATE'
+          PlatformVersion: 'LATEST'
+          NetworkConfiguration:
+            AwsVpcConfiguration:
+              AssignPublicIp: DISABLED
+#               SecurityGroups: 
+#                 - !GetAtt "TaskSecurityGroup.GroupId"
+              Subnets: !Ref Subnets
